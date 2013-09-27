@@ -16,7 +16,7 @@ version:             0.0.1.0
 synopsis:            Conduit for decoding ByteStrings using Data.Binary.Get
 
 -- A longer description of the package.
--- description:         
+description:      Simple conduit for decoding ByteStrings into values using Data.Binary.Get
 
 -- URL for the project homepage or repository.
 homepage:            https://github.com/hansonkd/decoder-conduit
