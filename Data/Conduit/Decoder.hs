@@ -8,9 +8,8 @@ module Data.Conduit.Decoder
 import           Control.Exception (Exception)
 import           Data.Binary.Get (Get, Decoder(Fail, Partial, Done), runGetIncremental, pushChunk)
 import           Data.ByteString (ByteString)
-import           Data.Conduit (Conduit, await, yield, leftover)
+import           Data.Conduit (Conduit, MonadThrow, monadThrow, await, yield)
 import           Data.Typeable (Typeable)
-import Control.Monad.Trans.Resource (MonadThrow, monadThrow)
 
 
 -- | Basic decoder exception
@@ -21,14 +20,15 @@ instance Exception BinaryDecodeException
 
 -- | Incrementally reads ByteStrings and builds from supplied Get monad.
 -- Will throw an exception if there was an error parsing
-conduitDecoder :: (MonadThrow m) => Get a -> Conduit ByteString m a
-conduitDecoder parser = decode parser (runGetIncremental parser)
-
-decode :: (MonadThrow m) => Get a -> Decoder a -> Conduit ByteString m a
-decode parser decoder = await >>= maybe (return ()) handleConvert
-   where
-     handleConvert msg = let decoded = decoder `pushChunk` msg in
-         case decoded of
-            Fail _ _ err -> monadThrow (BinaryDecodeException err) >> conduitDecoder parser
-            Partial _ -> decode parser decoded
-            Done rest offs what -> yield what >> leftover rest >> conduitDecoder parser
+conduitDecoder :: MonadThrow m => Get a -> Conduit ByteString m a
+conduitDecoder decoderGet = incrementalDecode emptyDecoder
+        where emptyDecoder = runGetIncremental decoderGet
+              incrementalDecode built = await >>= maybe (return ()) handleConvert
+                  where handleConvert bytestringInput = do
+                            case pushChunk built bytestringInput of
+                                    Done a n doc      -> do yield doc
+                                                            incrementalDecode $ pushChunk emptyDecoder a
+                                    curBS@(Partial _) -> incrementalDecode curBS
+                                    Fail a _ err -> do
+                                        monadThrow $ BinaryDecodeException err
+                                        incrementalDecode $ pushChunk emptyDecoder a
