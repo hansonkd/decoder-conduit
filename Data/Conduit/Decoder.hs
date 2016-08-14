@@ -8,8 +8,9 @@ module Data.Conduit.Decoder
 import           Control.Exception (Exception)
 import           Data.Binary.Get (Get, Decoder(Fail, Partial, Done), runGetIncremental, pushChunk)
 import           Data.ByteString (ByteString)
-import           Data.Conduit (Conduit, MonadThrow, monadThrow, await, yield)
+import           Data.Conduit (Conduit, await, yield, leftover)
 import           Data.Typeable (Typeable)
+import           Control.Monad.Trans.Resource (MonadThrow, monadThrow)
 
 
 -- | Basic decoder exception
@@ -21,15 +22,16 @@ instance Exception BinaryDecodeException
 -- | Incrementally reads ByteStrings and builds from supplied Get monad.
 -- Will throw an exception if there was an error parsing
 conduitDecoder :: MonadThrow m => Get a -> Conduit ByteString m a
-conduitDecoder decoderGet = incrementalDecode emptyGet
-        where emptyGet = runGetIncremental decoderGet
+conduitDecoder decoderGet = incrementalDecode emptyDecoder
+        where emptyDecoder = runGetIncremental decoderGet
               incrementalDecode built = await >>= maybe (return ()) handleConvert
-                  where handleConvert msg = do
-                            let newMsg = pushChunk built msg
-                            case newMsg of
-                                    Done a n doc -> do yield doc
-                                                       incrementalDecode $ pushChunk emptyGet a
-                                    Partial _    -> incrementalDecode newMsg
+                  where handleConvert bytestringInput = do
+                            case pushChunk built bytestringInput of
+                                    Done a n doc      -> do yield doc
+                                                            leftover a
+                                                            conduitDecoder decoderGet
+                                    curBS@(Partial _) -> incrementalDecode curBS
                                     Fail a _ err -> do
                                         monadThrow $ BinaryDecodeException err
-                                        incrementalDecode $ pushChunk emptyGet a
+                                        leftover a
+                                        conduitDecoder decoderGet

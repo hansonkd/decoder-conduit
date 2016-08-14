@@ -10,7 +10,7 @@ name:                decoder-conduit
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.0.1.0
+version:             0.0.1.2
 
 -- A short (one-line) description of the package.
 synopsis:            Conduit for decoding ByteStrings using Data.Binary.Get
@@ -53,5 +53,5 @@ library
   -- other-modules:       
   
   -- Other library packages from which modules are imported.
-  build-depends:       base ==4.6.*, binary ==0.7.*, bytestring ==0.10.*, conduit ==1.0.*
+  build-depends:       base >=4.8 && <4.9, binary ==0.7.*, bytestring ==0.10.*, conduit ==1.2.*, resourcet
   
