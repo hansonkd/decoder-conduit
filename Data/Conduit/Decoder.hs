@@ -8,8 +8,9 @@ module Data.Conduit.Decoder
 import           Control.Exception (Exception)
 import           Data.Binary.Get (Get, Decoder(Fail, Partial, Done), runGetIncremental, pushChunk)
 import           Data.ByteString (ByteString)
-import           Data.Conduit (Conduit, MonadThrow, monadThrow, await, yield)
+import           Data.Conduit (Conduit, await, yield, leftover)
 import           Data.Typeable (Typeable)
+import           Control.Monad.Trans.Resource (MonadThrow, monadThrow)
 
 
 -- | Basic decoder exception
