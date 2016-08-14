@@ -28,8 +28,10 @@ conduitDecoder decoderGet = incrementalDecode emptyDecoder
                   where handleConvert bytestringInput = do
                             case pushChunk built bytestringInput of
                                     Done a n doc      -> do yield doc
-                                                            incrementalDecode $ pushChunk emptyDecoder a
+                                                            leftover a
+                                                            conduitDecoder decoderGet
                                     curBS@(Partial _) -> incrementalDecode curBS
                                     Fail a _ err -> do
                                         monadThrow $ BinaryDecodeException err
-                                        incrementalDecode $ pushChunk emptyDecoder a
+                                        leftover a
+                                        conduitDecoder decoderGet
